@@ -1,0 +1,187 @@
+<section class="page-hero small">
+  <div class="container">
+    <p class="eyebrow">Online booking</p>
+    <h1>Book an appointment</h1>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    @if (!shop.loaded()) {
+      <p class="muted">Loading…</p>
+    } @else if (shop.error()) {
+      <div class="alert alert-error">The booking system is unavailable right now. Please call us on {{ shop.settings().phone }}.</div>
+    } @else {
+      <ol class="steps" aria-label="Booking steps">
+        @for (s of steps(); track s; let i = $index) {
+          <li [class.active]="i + 1 === step()" [class.done]="i + 1 < step()"><span>{{ i + 1 }}</span><em>{{ stepLabel(s) }}</em></li>
+        }
+      </ol>
+
+      @if (error()) { <div class="alert alert-error" role="alert">{{ error() }}</div> }
+
+      <div class="wizard-grid">
+        <div class="wizard-main">
+          @switch (current()) {
+            @case ('service') {
+              <h2>Choose a service</h2>
+              <div class="option-list">
+                @for (s of shop.services(); track s.id) {
+                  <button type="button" class="option" [class.selected]="serviceId() === s.id" (click)="pickService(s.id)">
+                    <span class="option-main"><strong>{{ s.name }}</strong><small>{{ s.description }}</small><small>⏱ {{ s.duration | duration }}</small></span>
+                    <span class="price">{{ s.price | currency: 'PHP' : 'symbol-narrow' : '1.0-0' }}</span>
+                  </button>
+                } @empty { <p class="muted">No services available right now.</p> }
+              </div>
+            }
+
+            @case ('barber') {
+              <h2>Choose your barber</h2>
+              <div class="option-list">
+                @for (b of shop.barbers(); track b.id) {
+                  <button type="button" class="option" [class.selected]="barberId() === b.id" (click)="pickBarber(b.id)">
+                    <span class="option-main"><strong>{{ b.name }}</strong><small>{{ b.description }}</small></span>
+                  </button>
+                }
+              </div>
+            }
+
+            @case ('datetime') {
+              <h2>Choose a date</h2>
+              <div class="date-strip">
+                @for (d of days(); track d.ymd) {
+                  <button type="button" class="date" [class.selected]="date() === d.ymd" [disabled]="!d.open" (click)="pickDate(d.ymd)"
+                          [attr.aria-label]="d.dow + ' ' + d.day + ' ' + d.month + (d.open ? '' : ' (closed)')">
+                    <small>{{ d.dow }}</small><strong>{{ d.day }}</strong><small>{{ d.month }}</small>
+                  </button>
+                }
+              </div>
+              <p class="muted small">Greyed-out days are closed.</p>
+
+              @if (date()) {
+                <h2>Available times · {{ date() | date: 'EEEE, MMM d' }}</h2>
+                @if (loadingSlots()) {
+                  <p class="muted">Checking availability…</p>
+                } @else if (slots().length === 0) {
+                  <p class="muted">No times available on this date. Please choose another day.</p>
+                } @else {
+                  <div class="slots">
+                    @for (sl of slots(); track sl.time) {
+                      <button type="button" class="slot" [class.selected]="time() === sl.time" [class.booked]="!sl.available"
+                              [disabled]="!sl.available" (click)="pickTime(sl)">
+                        <span>{{ sl.available ? '✅' : '❌' }}</span>
+                        <span class="slot-time">{{ sl.label }}</span>
+                        <span class="slot-status">{{ sl.status }}</span>
+                      </button>
+                    }
+                  </div>
+                }
+              }
+            }
+
+            @case ('details') {
+              <h2>Where would you like your cut?</h2>
+              <div class="option-list two">
+                <button type="button" class="option" [class.selected]="type() === 'in_store'" (click)="typeChoice.set('in_store')">
+                  <span class="option-main"><strong>In-store</strong><small>{{ shop.settings().address }}</small></span>
+                </button>
+                @if (shop.homeServiceEnabled()) {
+                  <button type="button" class="option" [class.selected]="type() === 'home_service'" (click)="typeChoice.set('home_service')">
+                    <span class="option-main"><strong>Home service</strong>
+                      <small>We come to you · +{{ shop.homeServiceFee() | currency: 'PHP' : 'symbol-narrow' : '1.0-0' }}</small></span>
+                  </button>
+                }
+              </div>
+
+              <h2>Your information</h2>
+              <div [formGroup]="form" class="form-grid">
+                <label>Full name *
+                  <input type="text" formControlName="customer_name" autocomplete="name" />
+                  @if (invalid('customer_name')) { <small class="field-error">Please enter your full name.</small> }
+                </label>
+                <label>Phone number *
+                  <input type="tel" formControlName="customer_phone" autocomplete="tel" placeholder="09XX XXX XXXX" />
+                  @if (invalid('customer_phone')) { <small class="field-error">Enter a valid phone number.</small> }
+                </label>
+                <label class="wide">Email *
+                  <input type="email" formControlName="customer_email" autocomplete="email" />
+                  @if (invalid('customer_email')) { <small class="field-error">Enter a valid email address.</small> }
+                </label>
+
+                @if (type() === 'home_service') {
+                  @if (shop.areas().length) {
+                    <label class="wide">Service area *
+                      <select (change)="setArea($event)">
+                        <option value="">Select your area</option>
+                        @for (a of shop.areas(); track a.id) {
+                          <option [value]="a.id" [selected]="areaId() === a.id">{{ areaLabel(a) }}</option>
+                        }
+                      </select>
+                      @if (areaMissing()) { <small class="field-error">Please choose your area.</small> }
+                    </label>
+                  }
+                  <label class="wide">Complete address *
+                    <textarea rows="2" formControlName="address" autocomplete="street-address" placeholder="House no., street, barangay, town"></textarea>
+                    @if (addressMissing()) { <small class="field-error">Address is required for home service.</small> }
+                  </label>
+                  <label class="wide">Landmark / instructions
+                    <input type="text" formControlName="landmark" placeholder="e.g. Blue gate beside the sari-sari store" />
+                  </label>
+                }
+
+                <label class="wide">Notes / requests
+                  <textarea rows="2" formControlName="notes" placeholder="Anything we should know? (optional)"></textarea>
+                </label>
+              </div>
+            }
+
+            @case ('review') {
+              <h2>Review your booking</h2>
+              <div class="card review">
+                <div class="review-row"><span>Service</span><strong>{{ selectedService()?.name }}</strong><button type="button" class="link" (click)="goStep('service')">Change</button></div>
+                <div class="review-row"><span>Barber</span><strong>{{ selectedBarber()?.name }}</strong></div>
+                <div class="review-row"><span>When</span><strong>{{ date() | date: 'fullDate' }} · {{ timeLabel() }}</strong><button type="button" class="link" (click)="goStep('datetime')">Change</button></div>
+                <div class="review-row"><span>Where</span>
+                  <strong>{{ type() === 'home_service' ? 'Home service' : 'In-store' }}<small>{{ type() === 'home_service' ? form.controls.address.value : shop.settings().address }}</small></strong>
+                  <button type="button" class="link" (click)="goStep('details')">Change</button></div>
+                <div class="review-row"><span>Name</span><strong>{{ form.controls.customer_name.value }}<small>{{ form.controls.customer_phone.value }} · {{ form.controls.customer_email.value }}</small></strong></div>
+                <div class="price-rows">
+                  <div><span>{{ selectedService()?.name }}</span><span>{{ selectedService()?.price | currency: 'PHP' : 'symbol-narrow' : '1.0-0' }}</span></div>
+                  @if (fee() > 0) { <div><span>Home service fee</span><span>{{ fee() | currency: 'PHP' : 'symbol-narrow' : '1.0-0' }}</span></div> }
+                  <div class="total"><span>Total</span><span>{{ total() | currency: 'PHP' : 'symbol-narrow' : '1.0-0' }}</span></div>
+                </div>
+              </div>
+              <p class="muted small">Your booking starts as <strong>PENDING</strong> until the barber confirms it. Payment is made at the appointment.</p>
+            }
+          }
+
+          <div class="wizard-nav">
+            @if (step() > 1) { <button type="button" class="btn btn-ghost" (click)="back()" [disabled]="submitting()">← Back</button> }
+            @if (current() === 'review') {
+              <button type="button" class="btn btn-primary btn-lg" (click)="confirm()" [disabled]="submitting()">
+                {{ submitting() ? 'Booking…' : 'Confirm appointment' }}
+              </button>
+            } @else {
+              <button type="button" class="btn btn-primary" (click)="next()">Continue →</button>
+            }
+          </div>
+        </div>
+
+        <aside class="card summary" aria-label="Your booking so far">
+          <h3>Your booking</h3>
+          <dl>
+            <div><dt>Service</dt><dd>{{ selectedService()?.name ?? '—' }}</dd></div>
+            @if (shop.barbers().length > 1) { <div><dt>Barber</dt><dd>{{ selectedBarber()?.name ?? '—' }}</dd></div> }
+            <div><dt>Date</dt><dd>{{ date() ? (date() | date: 'EEE, MMM d') : '—' }}</dd></div>
+            <div><dt>Time</dt><dd>{{ time() ? timeLabel() : '—' }}</dd></div>
+            <div><dt>Where</dt><dd>{{ type() === 'home_service' ? 'Home service' : 'In-store' }}</dd></div>
+          </dl>
+          <div class="price-rows">
+            @if (fee() > 0) { <div><span>Home service fee</span><span>{{ fee() | currency: 'PHP' : 'symbol-narrow' : '1.0-0' }}</span></div> }
+            <div class="total"><span>Total</span><span>{{ total() | currency: 'PHP' : 'symbol-narrow' : '1.0-0' }}</span></div>
+          </div>
+        </aside>
+      </div>
+    }
+  </div>
+</section>

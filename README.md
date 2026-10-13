@@ -1,59 +1,25 @@
-# FreemanBarbershopWeb
+# Freeman Barbershop: Angular site (Phase 2)
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.26.
+Public website + online booking wizard. Talks to the Laravel API from Phase 1.
 
-## Development server
+## Install
+1. Extract this zip.
+2. Copy everything over your Angular project (`freeman-barbershop-web`), choosing to replace files:
+   `src/` (index.html, styles.scss, app/...) and `public/images/` (logos).
+3. Start the Laravel API (`php artisan serve`) in the API folder.
+4. In the Angular folder run `npm start` and open http://localhost:4200
 
-To start a local development server, run:
+API address is set in `src/app/core/config.ts` (default `http://localhost:8000/api`).
 
-```bash
-ng serve
-```
+## Edit your content
+`src/app/core/site-content.ts`: intro text, About story, skills, years of experience, achievements,
+and **testimonials** (empty on purpose: add only real reviews). Empty fields are hidden.
+Prices, services, hours, address, phone and home-service fee come from the database (admin dashboard in Phase 3).
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Pages
+/ (home) · /about · /services · /portfolio · /certifications · /contact · /book · /confirmation · /find-booking
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+## Notes
+- Photos/certificates appear automatically once uploaded through the admin (Phase 3). Until then the site shows tidy placeholders.
+- Customer accounts (login, history, cancel/reschedule) and the admin dashboard come in the next phases.
+- Fonts load from Google Fonts; the site still works offline with fallback fonts.
